@@ -1,29 +1,50 @@
-import 'package:nsd/nsd.dart';
+import 'package:multicast_dns/multicast_dns.dart';
 
 class ServerDiscovery {
-  // Matches the service type we broadcast from Python
-  final String serviceType = '_zeroremote._tcp';
+  final String serviceName = '_zeroremote._tcp.local';
+  MDnsClient? _client;
+  bool _isScanning = false;
 
   Future<void> startScanning({
     required Function(String ip, int port) onFound,
   }) async {
-    final discovery = await startDiscovery(serviceType);
+    _isScanning = true;
+    _client = MDnsClient();
+    await _client!.start();
 
-    discovery.addListener(() {
-      for (final service in discovery.services) {
-        // Matches the service name from Python
-        if (service.name != null && service.name!.contains('Laptop')) {
-          final ip = service.addresses?.first.address;
-          final port = service.port;
+    try {
+      await for (final PtrResourceRecord ptr
+          in _client!.lookup<PtrResourceRecord>(
+            ResourceRecordQuery.serverPointer(serviceName),
+          )) {
+        if (!_isScanning) break;
 
-          if (ip != null && port != null) {
-            onFound(ip, port);
-            stopDiscovery(
-              discovery,
-            ); // Stop scanning once connected to save battery
+        await for (final SrvResourceRecord srv
+            in _client!.lookup<SrvResourceRecord>(
+              ResourceRecordQuery.service(ptr.domainName),
+            )) {
+          if (!_isScanning) break;
+
+          await for (final IPAddressResourceRecord ipRecord
+              in _client!.lookup<IPAddressResourceRecord>(
+                ResourceRecordQuery.addressIPv4(srv.target),
+              )) {
+            if (!_isScanning) break;
+
+            onFound(ipRecord.address.address, srv.port);
+            stopScanning();
+            return;
           }
         }
       }
-    });
+    } catch (e) {
+      print('Discovery error: $e');
+    }
+  }
+
+  void stopScanning() {
+    _isScanning = false;
+    _client?.stop();
+    _client = null;
   }
 }
