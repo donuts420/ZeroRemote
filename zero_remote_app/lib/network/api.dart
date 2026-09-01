@@ -7,18 +7,21 @@ class RemoteAPI {
 
   RemoteAPI({required this.ip, required this.port});
 
-  Future<void> sendCommand(String action) async {
+  Future<bool> sendCommand(String action) async {
     final url = Uri.parse('http://$ip:$port/command');
-
     try {
-      await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': action}),
-      );
-      print('Sent: $action');
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'action': action}),
+          )
+          .timeout(const Duration(seconds: 2));
+
+      return response.statusCode == 200;
     } catch (e) {
-      print('Failed to send $action: $e');
+      print('Command failed: $e');
+      return false;
     }
   }
 }

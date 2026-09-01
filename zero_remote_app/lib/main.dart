@@ -13,32 +13,45 @@ class ZeroRemoteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ZeroRemote',
-      theme: ThemeData.dark(),
-      home: const ConnectionScreen(),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(useMaterial3: true),
+      home: const RemoteScreen(),
     );
   }
 }
 
-// 1. The StatefulWidget definition
-class ConnectionScreen extends StatefulWidget {
-  const ConnectionScreen({super.key});
+class RemoteScreen extends StatefulWidget {
+  const RemoteScreen({super.key});
 
   @override
-  State<ConnectionScreen> createState() => _ConnectionScreenState();
+  State<RemoteScreen> createState() => _RemoteScreenState();
 }
 
-// 2. The State logic definition
-class _ConnectionScreenState extends State<ConnectionScreen> {
+class _RemoteScreenState extends State<RemoteScreen> {
   final ServerDiscovery _discovery = ServerDiscovery();
   RemoteAPI? _api;
+  String _status = 'Auto-discovering PC...';
+  bool _isSearching = true;
 
   @override
   void initState() {
     super.initState();
+    _startAutoDiscovery();
+  }
+
+  void _startAutoDiscovery() {
+    setState(() {
+      _isSearching = true;
+      _status = 'Auto-discovering PC...';
+    });
+
     _discovery.startScanning(
-      onFound: (String ip, int port) {
+      onFound: (ip, port) {
+        if (!mounted) return;
         setState(() {
           _api = RemoteAPI(ip: ip, port: port);
+          _isSearching = false;
+          _status = 'Connected to $ip:$port';
         });
       },
     );
@@ -47,51 +60,99 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ZeroRemote')),
-      body: Center(
-        child: _api == null
-            ? const Text(
-                "Scanning Wi-Fi...",
-                style: TextStyle(fontSize: 24, color: Colors.greenAccent),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Connected!",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: () => _api!.sendCommand('space'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(20),
+      appBar: AppBar(
+        title: const Text('ZeroRemote'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _startAutoDiscovery,
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _api != null
+                      ? Colors.green.withOpacity(0.2)
+                      : Colors.amber.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _api != null ? Icons.check_circle : Icons.sync,
+                      color: _api != null
+                          ? Colors.greenAccent
+                          : Colors.amberAccent,
+                      size: 20,
                     ),
-                    child: const Icon(Icons.play_arrow, size: 50),
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => _api!.sendCommand('volume_down'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(15),
-                        ),
-                        child: const Icon(Icons.volume_down, size: 40),
+                    const SizedBox(width: 8),
+                    Text(
+                      _status,
+                      style: TextStyle(
+                        color: _api != null
+                            ? Colors.greenAccent
+                            : Colors.amberAccent,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 30),
-                      ElevatedButton(
-                        onPressed: () => _api!.sendCommand('volume_up'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(15),
-                        ),
-                        child: const Icon(Icons.volume_up, size: 40),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+              const Spacer(),
+              if (_isSearching && _api == null) ...[
+                const CircularProgressIndicator(),
+                const SizedBox(height: 20),
+                const Text('Looking for ZeroRemote PC server on Wi-Fi...'),
+              ] else if (_api != null) ...[
+                ElevatedButton(
+                  onPressed: () => _api!.sendCommand('space'),
+                  style: ElevatedButton.styleFrom(
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(36),
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    size: 54,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _api!.sendCommand('volume_down'),
+                      style: ElevatedButton.styleFrom(
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(24),
+                      ),
+                      child: const Icon(Icons.volume_down, size: 36),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _api!.sendCommand('volume_up'),
+                      style: ElevatedButton.styleFrom(
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(24),
+                      ),
+                      child: const Icon(Icons.volume_up, size: 36),
+                    ),
+                  ],
+                ),
+              ],
+              const Spacer(),
+            ],
+          ),
+        ),
       ),
     );
   }

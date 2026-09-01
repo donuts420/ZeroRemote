@@ -11,7 +11,7 @@ pyautogui.FAILSAFE = False
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.connect(("8.8.8.8",53))
+        s.connect(("8.8.8.8", 53))
         return s.getsockname()[0]
     except Exception:
         return "127.0.0.1"
@@ -22,11 +22,13 @@ def start_mdns_broadcast(ip, port):
     info = ServiceInfo(
         type_="_zeroremote._tcp.local.",
         name="Laptop._zeroremote._tcp.local.",
+        server="Laptop.local.",
         addresses=[socket.inet_aton(ip)],
         port=port,
-        properties={'os': 'windows/mac/linux'}
+        properties={'os': 'windows'}
     )
-    zc = Zeroconf(ip_version=IPVersion.All)
+    # V4Only ensures clean packet broadcasting to Android devices
+    zc = Zeroconf(ip_version=IPVersion.V4Only)
     zc.register_service(info)
     print(f"[mDNS] Broadcasting 'ZeroRemote' on {ip}:{port}")
     return zc, info
@@ -36,6 +38,7 @@ def start_mdns_broadcast(ip, port):
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"status": "connected"}), 200
+
 @app.route('/command', methods=['POST'])
 def handle_command():
     data = request.get_json()
@@ -51,7 +54,6 @@ def handle_command():
     elif action == 'space':
         pyautogui.press('space')
     return jsonify({"status": "success"}), 200
-
 
 if __name__ == '__main__':
     port = 5000
