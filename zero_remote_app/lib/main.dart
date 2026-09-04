@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'network/discovery.dart';
 import 'network/api.dart';
-import 'package:flutter/services.dart';
 
 void main() {
   runApp(const ZeroRemoteApp());
@@ -81,8 +80,8 @@ class _RemoteScreenState extends State<RemoteScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: _api != null
-                      ? Colors.green.withOpacity(0.2)
-                      : Colors.amber.withOpacity(0.2),
+                      ? Colors.green.withValues(alpha: 0.2)
+                      : Colors.amber.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -114,19 +113,6 @@ class _RemoteScreenState extends State<RemoteScreen> {
                 const SizedBox(height: 20),
                 const Text('Looking for ZeroRemote PC server on Wi-Fi...'),
               ] else if (_api != null) ...[
-                ElevatedButton(
-                  onPressed: () => _api!.sendCommand('space'),
-                  style: ElevatedButton.styleFrom(
-                    shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(36),
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    size: 54,
-                    color: Colors.white,
-                  ),
-                ),
                 const SizedBox(height: 48),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -135,17 +121,29 @@ class _RemoteScreenState extends State<RemoteScreen> {
                       onPressed: () => _api!.sendCommand('volume_down'),
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(48), // Increased padding
+                        backgroundColor: Colors.redAccent.withValues(
+                          alpha: 0.2,
+                        ), // Added some color
                       ),
-                      child: const Icon(Icons.volume_down, size: 36),
+                      child: const Icon(
+                        Icons.volume_down,
+                        size: 54,
+                      ), // Increased size
                     ),
                     ElevatedButton(
                       onPressed: () => _api!.sendCommand('volume_up'),
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(48), // Increased padding
+                        backgroundColor: Colors.greenAccent.withValues(
+                          alpha: 0.2,
+                        ), // Added some color
                       ),
-                      child: const Icon(Icons.volume_up, size: 36),
+                      child: const Icon(
+                        Icons.volume_up,
+                        size: 54,
+                      ), // Increased size
                     ),
                   ],
                 ),

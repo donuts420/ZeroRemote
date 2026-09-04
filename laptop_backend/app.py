@@ -1,10 +1,8 @@
 import socket
 from flask import Flask, jsonify, request
 from zeroconf import IPVersion, ServiceInfo, Zeroconf
-import pyautogui
 
 app = Flask(__name__)
-pyautogui.FAILSAFE = False
 
 # Discover Network
 
@@ -18,10 +16,13 @@ def get_local_ip():
     finally:
         s.close()
 
+import uuid
+
 def start_mdns_broadcast(ip, port):
+    uid = uuid.uuid4().hex[:4]
     info = ServiceInfo(
         type_="_zeroremote._tcp.local.",
-        name="Laptop._zeroremote._tcp.local.",
+        name=f"Laptop-{uid}._zeroremote._tcp.local.",
         server="Laptop.local.",
         addresses=[socket.inet_aton(ip)],
         port=port,
@@ -39,6 +40,14 @@ def start_mdns_broadcast(ip, port):
 def ping():
     return jsonify({"status": "connected"}), 200
 
+import ctypes
+
+def press_key(hexKeyCode):
+    KEYEVENTF_EXTENDEDKEY = 0x0001
+    KEYEVENTF_KEYUP = 0x0002
+    ctypes.windll.user32.keybd_event(hexKeyCode, 0, KEYEVENTF_EXTENDEDKEY, 0) # Press
+    ctypes.windll.user32.keybd_event(hexKeyCode, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0) # Release
+
 @app.route('/command', methods=['POST'])
 def handle_command():
     data = request.get_json()
@@ -48,11 +57,11 @@ def handle_command():
     print(f'Received command: {action}')
 
     if action == 'volume_up':
-        pyautogui.press('volumeup')
+        press_key(0xAF) # VK_VOLUME_UP
     elif action == 'volume_down':
-        pyautogui.press('volumedown')
+        press_key(0xAE) # VK_VOLUME_DOWN
     elif action == 'space':
-        pyautogui.press('space')
+        press_key(0x20) # VK_SPACE
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':

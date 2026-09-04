@@ -1,60 +1,51 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'package:nsd/nsd.dart';
+import 'package:flutter/foundation.dart';
 
 class ServerDiscovery {
   bool _isScanning = false;
+  Discovery? _nsdDiscovery;
 
   Future<void> startScanning({
     required Function(String ip, int port) onFound,
   }) async {
+    if (_isScanning) return;
     _isScanning = true;
 
     try {
-      // Find local subnet IP of the phone
-      String subnet = '';
-      for (var interface in await NetworkInterface.list()) {
-        for (var addr in interface.addresses) {
-          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-            final parts = addr.address.split('.');
-            subnet = '${parts[0]}.${parts[1]}.${parts[2]}';
-            break;
+      _nsdDiscovery = await startDiscovery(
+        '_zeroremote._tcp',
+        autoResolve: true,
+      );
+
+      _nsdDiscovery!.addListener(() {
+        if (!_isScanning) return;
+
+        for (final service in _nsdDiscovery!.services) {
+          if (service.host != null && service.port != null) {
+            _isScanning = false;
+            final hostIp = service.host!;
+            final port = service.port!;
+            stopDiscovery(_nsdDiscovery!);
+            onFound(hostIp, port);
+            return;
           }
         }
-        if (subnet.isNotEmpty) break;
-      }
-
-      if (subnet.isEmpty)
-        subnet = '192.168.43'; // Default mobile hotspot subnet fallback
-
-      // Concurrently ping all 254 IPs on the subnet
-      final List<Future<void>> pingTasks = [];
-
-      for (int i = 1; i < 255; i++) {
-        final host = '$subnet.$i';
-        pingTasks.add(
-          http
-              .get(Uri.parse('http://$host:5000/ping'))
-              .timeout(const Duration(milliseconds: 1500))
-              .then((response) {
-                if (_isScanning &&
-                    response.statusCode == 200 &&
-                    response.body.contains('connected')) {
-                  _isScanning = false;
-                  onFound(host, 5000);
-                }
-              })
-              .catchError((_) {}),
-        );
-      }
-
-      await Future.wait(pingTasks);
+      });
     } catch (e) {
-      print('Discovery error: $e');
+      debugPrint('Discovery error: $e');
+      _isScanning = false;
+      if (_nsdDiscovery != null) {
+        stopDiscovery(_nsdDiscovery!);
+      }
     }
   }
 
   void stopScanning() {
     _isScanning = false;
+    if (_nsdDiscovery != null) {
+      stopDiscovery(_nsdDiscovery!);
+      _nsdDiscovery = null;
+    }
   }
 }

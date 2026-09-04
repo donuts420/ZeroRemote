@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 class RemoteAPI {
   final String ip;
@@ -20,7 +21,7 @@ class RemoteAPI {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Command failed: $e');
+      debugPrint('Command failed: $e');
       return false;
     }
   }
