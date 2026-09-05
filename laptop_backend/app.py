@@ -41,6 +41,18 @@ def ping():
     return jsonify({"status": "connected"}), 200
 
 import ctypes
+import pyautogui
+pyautogui.FAILSAFE = False
+
+# Virtual-Key codes
+VK_VOLUME_MUTE = 0xAD
+VK_VOLUME_DOWN = 0xAE
+VK_VOLUME_UP = 0xAF
+VK_MEDIA_NEXT_TRACK = 0xB0
+VK_MEDIA_PREV_TRACK = 0xB1
+VK_MEDIA_STOP = 0xB2
+VK_MEDIA_PLAY_PAUSE = 0xB3
+VK_SPACE = 0x20
 
 def press_key(hexKeyCode):
     KEYEVENTF_EXTENDEDKEY = 0x0001
@@ -54,14 +66,29 @@ def handle_command():
     if not data or 'action' not in data:
         return jsonify({"error": "No action provided"}), 400
     action = data['action']
-    print(f'Received command: {action}')
 
     if action == 'volume_up':
-        press_key(0xAF) # VK_VOLUME_UP
+        press_key(VK_VOLUME_UP)
     elif action == 'volume_down':
-        press_key(0xAE) # VK_VOLUME_DOWN
-    elif action == 'space':
-        press_key(0x20) # VK_SPACE
+        press_key(VK_VOLUME_DOWN)
+    elif action == 'volume_mute':
+        press_key(VK_VOLUME_MUTE)
+    elif action == 'play_pause':
+        press_key(VK_MEDIA_PLAY_PAUSE)
+    elif action == 'prev_track':
+        press_key(VK_MEDIA_PREV_TRACK)
+    elif action == 'next_track':
+        press_key(VK_MEDIA_NEXT_TRACK)
+    elif action == 'sleep':
+        # Put computer to sleep (suspend state)
+        ctypes.windll.powrprof.SetSuspendState(0, 1, 0)
+    elif action == 'mouse_move':
+        dx = data.get('dx', 0)
+        dy = data.get('dy', 0)
+        pyautogui.moveRel(dx, dy)
+    elif action == 'mouse_click':
+        button = data.get('button', 'left')
+        pyautogui.click(button=button)
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':

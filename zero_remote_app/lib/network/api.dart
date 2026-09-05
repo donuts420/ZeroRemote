@@ -8,16 +8,23 @@ class RemoteAPI {
 
   RemoteAPI({required this.ip, required this.port});
 
-  Future<bool> sendCommand(String action) async {
+  Future<bool> sendCommand(
+    String action, [
+    Map<String, dynamic>? extraData,
+  ]) async {
     final url = Uri.parse('http://$ip:$port/command');
     try {
+      final Map<String, dynamic> body = {'action': action};
+      if (extraData != null) {
+        body.addAll(extraData);
+      }
       final response = await http
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': action}),
+            body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 2));
+          .timeout(const Duration(milliseconds: 1500));
 
       return response.statusCode == 200;
     } catch (e) {
